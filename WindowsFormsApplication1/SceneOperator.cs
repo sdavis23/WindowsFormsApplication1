@@ -169,7 +169,7 @@ namespace WindowsFormsApplication
                 save();
 
                 startPreprocess();
-                save();
+                save(); 
 
             }
 
@@ -183,6 +183,7 @@ namespace WindowsFormsApplication
         {
             filterScans();
             applyPictures();
+            exportScans();
             
         }
 
@@ -196,8 +197,15 @@ namespace WindowsFormsApplication
         public void exportScans()
         {
             scanRightClick();
-            clickPopUpMenuPath("Operations", "Import/Export", "Export Scans - Ordered");
+            clickPopUpMenuPath("Import/Export", "Export Scans - Ordered");
+            hitEnterOnWindow("Export Scan Points");
             waitForSingleWindow();
+        }
+
+        private void hitEnterOnWindow(String windowTitle)
+        {
+            app.GetWindows().Where(item => item.Name.Equals(windowTitle)).ToArray()[0]
+                            .Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
         }
 
         public void clean_exit()
@@ -239,9 +247,12 @@ namespace WindowsFormsApplication
             {
                 try
                 {
-                    if (app.GetWindows().Where(item => item.Title.Equals("SCENE")).Count() > 0)
+                    var dialog_windows = app.GetWindows().Where(item => item.Title.Equals("SCENE"));
+
+
+                    if (dialog_windows.Count() > 0)
                     {
-                        scene_window.Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
+                        dialog_windows.ToArray()[0].Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
                         break;
                     }
                     continue;

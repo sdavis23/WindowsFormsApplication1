@@ -113,7 +113,7 @@ namespace WindowsFormsApplication
             String job_string;
             String body_string;
 
-            if(process == OPPROC.APPLY_FILTER_EXPORT)
+            if(process == OPPROC.PREPROCESS_SCANS)
             {
                 job_string = "PreProcessing";
                 body_string = "The preprocessing phase of the scan. Ready for registration.";
@@ -126,9 +126,9 @@ namespace WindowsFormsApplication
             }
 
 
-            var fromAddress = new MailAddress("sdavis@onsite3d.ca", "Automation");
+            var fromAddress = new MailAddress("seadav.17@gmail.com", "Automation");
             var toAddress = new MailAddress(EmailAddress, "Sean Davis");
-            const string fromPassword = "woleoszeuirmtvii";
+            const string fromPassword = "mpgbxjiiwzjpviux";
             string subject = "SCENE - Automation Done (" + job_string + ")";
             string body = "Scene has finished : " + body_string;
 

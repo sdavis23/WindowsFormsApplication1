@@ -132,6 +132,8 @@ namespace WindowsFormsApplication
               
             }
 
+            email_comm.EmailAddress = EmailBox.Text;
+
             if (checkProjectFile(txt_proj_dir.Text))
             {
                 try
@@ -162,7 +164,7 @@ namespace WindowsFormsApplication
 
                 // it's made it to here, so we can assume the process is done and we're ready to send an email
                 email_comm.sendMessage(proc);
-                email_comm.EmailAddress = EmailBox.Text;
+                
 
                 using (System.IO.StreamWriter writer = new System.IO.StreamWriter(getXMLFilePath()))
                 {
