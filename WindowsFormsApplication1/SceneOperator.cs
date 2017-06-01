@@ -199,6 +199,7 @@ namespace WindowsFormsApplication
             scanRightClick();
             clickPopUpMenuPath("Import/Export", "Export Scans - Ordered");
             hitEnterOnWindow("Export Scan Points");
+            System.Threading.Thread.Sleep(100);
             waitForSingleWindow();
         }
 
