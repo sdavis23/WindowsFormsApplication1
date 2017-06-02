@@ -99,9 +99,7 @@ namespace WindowsFormsApplication
             {
                 scene_window.Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
             }
-
-           
-            
+  
         }
 
         public void assignProcess(Process p)
@@ -167,7 +165,7 @@ namespace WindowsFormsApplication
                 file_dialog.Close();
 
                 save();
-
+                findSpheres();
                 startPreprocess();
                 save(); 
 
@@ -179,12 +177,26 @@ namespace WindowsFormsApplication
             }
         }
 
+        private void findSpheres()
+        {
+            TestStack.White.UIItems.TreeItems.TreeNode tNode = getScanTreeViewer();
+            TreeNode[] nodes = tNode.Nodes.ToArray();
+            
+            foreach(TreeNode child_node in nodes)
+            {
+                child_node.RightClick();
+                clickPopUpMenuPath("Operations", "Find Objects", "Spheres");
+                System.Threading.Thread.Sleep(500);
+                waitForSingleWindow();
+            }
+
+        }
+
         public void applyFilterExport()
         {
             filterScans();
             applyPictures();
             exportScans();
-            
         }
 
         public void applyPictures()
@@ -199,7 +211,7 @@ namespace WindowsFormsApplication
             scanRightClick();
             clickPopUpMenuPath("Import/Export", "Export Scans - Ordered");
             hitEnterOnWindow("Export Scan Points");
-            System.Threading.Thread.Sleep(100);
+            System.Threading.Thread.Sleep(500);
             waitForSingleWindow();
         }
 
@@ -211,7 +223,7 @@ namespace WindowsFormsApplication
 
         public void clean_exit()
         {
-            app.Kill();
+            app.Close();
         }
 
         /// <summary>

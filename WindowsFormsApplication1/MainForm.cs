@@ -185,8 +185,6 @@ namespace WindowsFormsApplication
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         { 
-            email_comm.EmailAddress = EmailBox.Text.Trim();
-          
             if (op != null)
             {
                 op.clean_exit();
