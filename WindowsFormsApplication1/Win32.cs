@@ -20,15 +20,32 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace WindowsFormsApplication1
+namespace WindowsFormsApplication
 {
+
+
+
+    public struct SYSTEMTIME
+    {
+        public ushort wYear;
+        public ushort wMonth;
+        public ushort wDayOfWeek;
+        public ushort wDay;
+        public ushort wHour;
+        public ushort wMinute;
+        public ushort wSecond;
+        public ushort wMilliseconds;
+    }
+
+
     public class Win32
     {
-        // FindWindow() is used by the MailReader to find a Windows Live Mail window.
-
+        
         [DllImport("user32.dll")]
         public static extern IntPtr FindWindow(String sClassName, String sAppName);
-       [DllImport("user32.dll")]
-       public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+        [DllImport("user32.dll")]
+        public static extern int GetClassName(IntPtr hWnd, StringBuilder lpClassName, int nMaxCount);
+
+      
     }
 }

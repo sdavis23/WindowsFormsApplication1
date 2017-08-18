@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.IO;
 using System.Globalization;
+using System.Xml.Serialization;
 using System.Net.Mail;
 using System.Net;
 
@@ -25,11 +26,41 @@ namespace WindowsFormsApplication
    public class Communicator
     {
 
-        public String EmailAddress;
-        public String Project_Path;
-        public String scan_dir;
+     
         private bool invalid_email;
+        private string email;
+        private string proj_path;
+        private string scan_directory;
+        private bool trial;
+
+        [XmlAttribute]
+        public String EmailAddress
+        {
+            get { return email; }
+            set { email = value;  }
+        }
+
+        [XmlAttribute]
+        public String Project_Path
+        {
+            get { return proj_path;  }
+            set { proj_path = value;  }
+        }
+
+        [XmlAttribute]
+        public String scan_dir
+        {
+            get { return scan_directory;  }
+            set { scan_directory = value; }
+        }
         
+        [XmlAttribute]
+        public bool is_trial
+        {
+            get { return trial; }
+            set { trial = value; }
+        }
+
         private string DomainMapper(Match match)
         {
             // IdnMapping class with default property values.

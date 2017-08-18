@@ -20,9 +20,17 @@ namespace WindowsFormsApplication
         private XmlSerializer serializer;
         private SceneOperator op;
 
+        // constants defining the indices of the different
+        // cells of the grid.
+        private const int MEAN_INDEX = 0;
+        private const int SUBSAMPLE_INDEX = 1;
+        private const int ITERATION_INDEX = 2;
+        private const int MAX_SEARCH_DIST = 3;
+
         public MainForm()
         {  
             InitializeComponent();
+            
             initObjects();
             loadControlDefaults();
         }
@@ -41,10 +49,22 @@ namespace WindowsFormsApplication
 
         private void loadControlDefaults()
         {
-            String config_path = getXMLFilePath();
+           
             configNullDefaults();
+            loadFromXML(getXMLFilePath());
 
-            if (System.IO.File.Exists(config_path) )
+            dataGridView1.Rows[0].Cells[0].Value = "0-15";
+            dataGridView1.Rows[0].Cells[1].Value = "0.065";
+            dataGridView1.Rows[0].Cells[2].Value = "50";
+            dataGridView1.Rows[0].Cells[3].Value = "1";
+            dataGridView1.Rows.Add("15-20", "0.055", "50", "2");
+           
+        }
+
+        private void loadFromXML(string config_path)
+        {
+
+            if (System.IO.File.Exists(config_path))
             {
                 using (StreamReader reader = new StreamReader(config_path))
                 {
@@ -79,10 +99,10 @@ namespace WindowsFormsApplication
 
                 }
             }
-           
-            
-           
+
+
         }
+
 
         private void configNullDefaults()
         {
@@ -153,6 +173,12 @@ namespace WindowsFormsApplication
                         case OPPROC.PREPROCESS_SCANS:
                             op.preProcessScans();
                             break;
+
+                        case OPPROC.REGISTER:
+
+                            op.registerScans(parseRegisterGrid());
+                            break;
+
                     }
 
                 }
@@ -182,6 +208,54 @@ namespace WindowsFormsApplication
             }
 
         }
+
+        /// <summary>
+        /// Takes the values in the registration grid and 
+        /// turns them into an array of registration controls.
+        /// Including: validation that the numbers make sense.
+        /// </summary>
+        private RegistrationControl[] parseRegisterGrid()
+        {
+            RegistrationControl[] control_array = new RegistrationControl[dataGridView1.Rows.Count];
+
+            for (int i = 0; i < control_array.Length; i++)
+            {
+                var current_row = dataGridView1.Rows[i];
+                Tuple<int, int> min_max = parseMaxMinColumn(getStringFromCell(current_row.Cells[MEAN_INDEX]));
+
+                control_array[i] = new RegistrationControl()
+                {
+                    min_mean = min_max.Item1,
+                    max_mean = min_max.Item2,
+                    num_iterations = int.Parse(getStringFromCell(current_row.Cells[ITERATION_INDEX])),
+                    max_searchdist = double.Parse(getStringFromCell(current_row.Cells[MAX_SEARCH_DIST])),
+                    avg_subsample =  double.Parse(current_row.Cells[SUBSAMPLE_INDEX].Value.ToString())
+                };
+            }
+
+            return control_array;
+        }
+
+        private string getStringFromCell(DataGridViewCell c)
+        {
+            return c.Value.ToString();
+        }
+
+        /// <summary>
+        /// Given a string of the form : min-max,
+        ///     corresponding the first mean column in the datagrid view
+        ///     returns a tuple where the first element is the min and the 
+        ///     second element is the max
+        /// </summary>
+        /// <param name="col_value">a string of the form min-max</param>
+        /// <returns></returns>
+        private Tuple<int, int> parseMaxMinColumn(string col_value)
+        {
+            string[] vals = col_value.Split('-');
+
+            return new Tuple<int, int>(int.Parse(vals[0]), int.Parse(vals[1]));
+        }
+
 
         private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
         { 
@@ -244,6 +318,11 @@ namespace WindowsFormsApplication
         {
 
             startOperatorProcess(OPPROC.APPLY_FILTER_EXPORT);
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            startOperatorProcess(OPPROC.REGISTER);
         }
     }
 }

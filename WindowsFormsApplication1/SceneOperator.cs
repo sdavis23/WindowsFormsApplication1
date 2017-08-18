@@ -16,8 +16,7 @@ using TestStack.White.UIItems.WindowStripControls;
 using TestStack.White.UIItems.ListBoxItems;
 using System.Windows;
 using System.Windows.Input;
-
-
+using System.Runtime.InteropServices;
 
 /*
  * Responsible for operating the scene
@@ -33,10 +32,22 @@ namespace WindowsFormsApplication
     {
         APPLY_FILTER_EXPORT,
         PREPROCESS_SCANS,
+        REGISTER
     }
+
+    public class RegistrationControl
+    {
+        public int min_mean;
+        public int max_mean;
+        public double avg_subsample;
+        public int num_iterations;
+        public double max_searchdist;
+    }
+   
 
     class SceneOperator
     {
+
 
         private Window scene_window;
         private TestStack.White.Application app;
@@ -48,6 +59,23 @@ namespace WindowsFormsApplication
         private String project_path  = null;
         private bool is_saving = false;
         private bool trial = false;
+
+        [DllImport("kernel32.dll")]
+        public static extern void GetSystemTime(ref SYSTEMTIME lpSystemTime);
+        [DllImport("kernel32.dll")]
+        public static extern bool SetSystemTime(ref SYSTEMTIME lpSystemTime);
+
+        // the indices for the point cloud selections in each of the boxes.
+        int TARGET_INDEX = 0;
+        int TOP_VIEW_INDEX = 1;
+        int CLOUD_TO_CLOUD_INDEX = 2;
+
+        private enum PLACEMENT_TYPE
+        {
+            TARGET,
+            TOP_VIEW,
+            CLOUD_TO_CLOUD
+        }
 
         // defines the signature for a function that traces a menu and \
         // opens a modal at the end of the apth
@@ -73,8 +101,27 @@ namespace WindowsFormsApplication
             this.trial = is_trial;
             RAW_SCAN_PATH = scan_path;
             project_path = proj_path;
+            openScene(proj_path);
+            
+        }
 
+        private void openScene(String proj_path)
+        {
+            // save the system time
+            SYSTEMTIME current_time = new SYSTEMTIME();
+            GetSystemTime(ref current_time);
+           
+            current_time.wMonth = (ushort)(current_time.wMonth - 1);
+            //set the system time to one month ago
+            SetSystemTime(ref current_time);
+
+            // start the process
             initProcess(System.Diagnostics.Process.Start(proj_path));
+
+            current_time.wMonth = (ushort)(current_time.wMonth + 1);
+            //reset the system time
+            SetSystemTime(ref current_time);
+
         }
 
         public void setScanDir(String scan_path)
@@ -99,7 +146,9 @@ namespace WindowsFormsApplication
             {
                 scene_window.Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
             }
-  
+
+            
+           
         }
 
         public void assignProcess(Process p)
@@ -150,6 +199,12 @@ namespace WindowsFormsApplication
            
         }
 
+
+        /// <summary>
+        /// Does the actual operations surrounding the preprocessing of scans.
+        /// Including: Saving and finding the targets, and the user of the preprocessing button
+        /// in the scans.
+        /// </summary>
         private void commitPreProcessScans()
         {
             try
@@ -177,6 +232,150 @@ namespace WindowsFormsApplication
             }
         }
 
+        /// <summary>
+        /// Registers the scan, using an array of objects that control
+        /// what the numbers become if the mean falls within
+        /// 
+        /// At this point:
+        ///     assumes the intervals in the array to be mutually exclusive.
+        ///     and the intervals are closed on both ends.
+        /// </summary>
+        /// <param name="control_array"></param>
+        public void registerScans(RegistrationControl[] control_array)
+        {
+
+           
+
+            placeScanConfig();
+            scene_window.Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
+            double meanVal = getScanMeanVal(); 
+
+            int current_index = 0;
+            bool set_reg_values = false;
+
+            while(current_index < control_array.Length && !set_reg_values )
+            {
+                RegistrationControl current_control = control_array[current_index];
+
+                if (meanVal > current_control.min_mean && meanVal < current_control.max_mean)
+                {
+                  setRegistrationValues(current_control.avg_subsample, current_control.num_iterations, current_control.max_searchdist);
+                    waitForSingleWindow();
+                  set_reg_values = true;
+                }
+
+                current_index++;
+            }
+
+            save();
+
+            int test = 934;
+
+        }
+
+        private void pressKeyNTimes(Window w, int n, TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys s)
+        {
+            int current_val = 1;
+            while(current_val <= n)
+            {
+                w.Keyboard.PressSpecialKey(s);
+                current_val++;
+            }
+        }
+
+        private double getScanMeanVal()
+        {
+
+         
+            while (!app.GetWindows().Exists(w => w.Name.Trim().Equals("/Scans/ScanManager")))
+            {
+                System.Threading.Thread.Sleep(200);
+            }
+
+            Window control_window = app.GetWindows().ToArray()[1];
+            control_window.Get(SearchCriteria.ByText("Scan Point Tensions")).Click();
+             
+            String mean_text = control_window.Get<TextBox>("Mean:").Text;
+            control_window.Close();
+
+            return double.Parse(mean_text);
+
+        }
+
+        private void placeScanConfig()
+        {
+
+            scanRightClick();
+            Window place_scans = openPlaceScanWindow();
+            ComboBox c = place_scans.Get<ComboBox>();
+            c.Items[TOP_VIEW_INDEX].Click();
+
+            place_scans.Get(SearchCriteria.ByText("General")).Click();
+            place_scans.Get<CheckBox>("GPS").Checked = false;
+
+        }
+
+        private void setRegistrationValues(double avg_subsample, int max_iterations, double max_dist)
+        {
+
+            scanRightClick();
+            Window place_scans = openPlaceScanWindow();
+            ComboBox c = place_scans.Get<ComboBox>();
+            c.Items[CLOUD_TO_CLOUD_INDEX].Click();
+            double current_value = double.Parse(place_scans.Get<TextBox>("Average subsampling point distance:").Text);
+            double diff = Math.Round(current_value - avg_subsample, 3);
+
+            string text_box_name = "Average subsampling point distance:";
+
+            if(diff > 0)
+            {
+                pressKeyUntil(place_scans, text_box_name,  avg_subsample.ToString(), 
+                                                           TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.LEFT);
+            }
+            else
+            {
+              pressKeyUntil(place_scans, text_box_name,   avg_subsample.ToString(),
+                                                          TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RIGHT);
+            }
+
+            place_scans.Get<TextBox>("Maximum number of iterations:").Text = max_iterations.ToString();
+            place_scans.Get<TextBox>("Maximum search distance:").Text = max_dist.ToString();
+
+            place_scans.Keyboard.PressSpecialKey(TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys.RETURN);
+           
+        }
+
+        private void pressKeyUntil(Window w, string textBoxName,   string stopping_string, 
+                                                                    TestStack.White.WindowsAPI.KeyboardInput.SpecialKeys key)
+        {
+            string subsample = w.Get<TextBox>(textBoxName).Text;
+
+            while (!subsample.Equals(stopping_string))
+            {
+                w.Keyboard.PressSpecialKey(key);
+                subsample = w.Get<TextBox>(textBoxName).Text;
+            }
+        }
+
+        private Window openPlaceScanWindow()
+        {
+
+            clickPopUpMenuPath("Operations", "Registration", "Place Scans");
+            Window place_scans = null;
+
+            while (app.GetWindows().ToArray().Length < 2)
+            {
+                System.Threading.Thread.Sleep(100);
+            }
+
+            place_scans = app.GetWindows().ToArray()[1];
+
+            return place_scans;
+        }
+
+        /// <summary>
+        /// Finds the targets: spheres in each scan shown in any given tree.
+        /// </summary>
         private void findSpheres()
         {
             TestStack.White.UIItems.TreeItems.TreeNode tNode = getScanTreeViewer();
@@ -290,7 +489,7 @@ namespace WindowsFormsApplication
                 {
                     
 
-                    if (app.GetWindows().Count == 1)
+                    if (singleWindow())
                     {
                         break;
                     }
@@ -305,6 +504,11 @@ namespace WindowsFormsApplication
             }
 
 
+        }
+
+        private bool singleWindow()
+        {
+            return app.GetWindows().Count == 1 || scene_window.ModalWindows().Count == 0;
         }
 
         /// <summary>
@@ -403,6 +607,7 @@ namespace WindowsFormsApplication
                 i++;
             }
 
+           
             folder.Click();
             return folder;
         }
@@ -465,6 +670,11 @@ namespace WindowsFormsApplication
             return openModal(modalTitle, clickPopUpMenuPath, path);
         }
 
+        private Window openFirstPopUpMenuModal(params string[] path)
+        {
+            return openFirstModal(clickPopUpMenuPath, path);
+        }
+
         private void clickPopUpMenuPath(params string[] path)
         {
             scene_window.PopupMenu(path).Click();
@@ -473,13 +683,22 @@ namespace WindowsFormsApplication
         private void clickMainMenuPath(params string[] path)
         {
             MenuBar menu = scene_window.MenuBar;
+
             menu.MenuItem(path).Click();
         }
 
         private Window openModal(String modalTitle, MenuTrace openModalFromMenu, params string[] path)
         {
             openModalFromMenu(path);
+        
             return scene_window.ModalWindow(modalTitle);
+        }
+        
+        private Window openFirstModal(MenuTrace openModalFromMenu, params string[] path)
+        {
+
+            openModalFromMenu(path);
+            return scene_window.ModalWindows().ToArray()[0];
         }
 
         private TestStack.White.UIItems.TreeItems.TreeNode getScanTreeViewer()
